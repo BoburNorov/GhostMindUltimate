@@ -12,19 +12,17 @@ import pytesseract
 import speech_recognition as sr
 from pydub import AudioSegment
 
-# Загружаем переменные из .env
+# Загрузка переменных среды
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 
-# Проверка токена
 if TELEGRAM_TOKEN is None:
     raise ValueError("TELEGRAM_TOKEN не найден в .env")
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 memory = {}
 
-# Flask сервер
 app = Flask(__name__)
 
 @app.route('/')
@@ -56,27 +54,22 @@ def handle_text(message):
         price = get_price("bitcoin")
         bot.send_message(chat_id, f"BTC: {price}")
         send_voice(chat_id, f"Цена биткоина: {price}")
-
-    elif "gold" in text or "xau" in text or "золото" in text:
+    elif "gold" in text or "xau" in text:
         price = get_price("gold")
         bot.send_message(chat_id, f"Gold: {price}")
         send_voice(chat_id, f"Цена золота: {price}")
-
     elif "привет" in text or "салом" in text:
         answer = "Салом, жонам! Я GhostMind Ultimate Pro. Готов анализировать рынок!"
         bot.send_message(chat_id, answer)
         send_voice(chat_id, answer)
-
     elif "nonfarm" in text or "новости" in text:
         msg = "Следующее событие NonFarm будет в ближайшую пятницу. Я дам сигнал заранее."
         bot.send_message(chat_id, msg)
         send_voice(chat_id, msg)
-
     elif "совет" in text or "что делать" in text:
         msg = "Совет: жди подтверждение объема и не входи против тренда."
         bot.send_message(chat_id, msg)
         send_voice(chat_id, msg)
-
     else:
         reply = f"Принято: {text}"
         bot.send_message(chat_id, reply)
@@ -90,10 +83,7 @@ def get_price(coin):
     except:
         return "ошибка получения цены"
 
-# Запускаем Flask-сервер и устанавливаем Webhook
 def run():
-    bot.remove_webhook()
-    bot.set_webhook(url=f"https://{os.getenv('REPL_SLUG')}.{os.getenv('REPL_OWNER')}.repl.co/{TELEGRAM_TOKEN}")
     app.run(host='0.0.0.0', port=8081)
 
 Thread(target=run).start()
