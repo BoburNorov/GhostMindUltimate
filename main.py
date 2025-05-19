@@ -6,15 +6,11 @@ from deep_translator import GoogleTranslator
 from gtts import gTTS
 from io import BytesIO
 import requests
-
 load_dotenv()
-
 BOT_TOKEN = os.getenv("TELEGRAM_TOKEN")
 bot = telebot.TeleBot(BOT_TOKEN)
 app = Flask(__name__)
-
 memory = {}
-
 def get_market_data():
     try:
         btc = requests.get("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd").json()
@@ -24,18 +20,15 @@ def get_market_data():
         return f"Bitcoin: ${btc_price:,}\nGold: ${gold_price:,}"
     except Exception as e:
         return f"Error getting market data: {str(e)}"
-
 def send_voice(chat_id, text):
     tts = gTTS(text=text, lang='ru', slow=False)
     voice_fp = BytesIO()
     tts.write_to_fp(voice_fp)
     voice_fp.seek(0)
     bot.send_voice(chat_id, voice_fp)
-
 @app.route('/', methods=['GET'])
 def index():
     return "GhostMind Ultimate Webhook is running!"
-
 @app.route('/webhook', methods=['POST'])
 def webhook():
     if request.headers.get('content-type') == 'application/json':
@@ -45,7 +38,6 @@ def webhook():
         return '', 200
     else:
         return 'Invalid content type', 403
-
 @bot.message_handler(commands=['start'])
 def start(message):
     name = message.from_user.first_name
@@ -54,15 +46,12 @@ def start(message):
     greeting = f"Ð¡Ð°Ð»Ð¾Ð¼, {name}! Ð¯ GhostMind Ultimate. ÐÐ°Ð¿Ð¸ÑÐ¸ Â«ÑÐµÐ½Ð°Â» ÑÑÐ¾Ð±Ñ Ð¿Ð¾Ð»ÑÑÐ¸ÑÑ Ð°Ð½Ð°Ð»Ð¸Ð· BTC Ð¸ Ð·Ð¾Ð»Ð¾ÑÐ°."
     bot.send_message(chat_id, greeting)
     send_voice(chat_id, greeting)
-
 @bot.message_handler(func=lambda msg: True)
 def handle_message(message):
     chat_id = message.chat.id
     text = message.text.lower().strip()
-
     memory[chat_id] = memory.get(chat_id, {})
     memory[chat_id]["last"] = text
-
     if text.startswith("Ð¿ÐµÑÐµÐ²Ð¾Ð´Ð¸ Ð½Ð°"):
         try:
             lang_map = {
@@ -96,7 +85,6 @@ def handle_message(message):
         reply = f"Ð¢Ñ Ð½Ð°Ð¿Ð¸ÑÐ°Ð»: {text}"
         bot.send_message(chat_id, reply)
         send_voice(chat_id, reply)
-
 # Ð£ÑÑÐ°Ð½Ð¾Ð²ÐºÐ° Webhook Ð¿ÑÐ¸ Ð·Ð°Ð¿ÑÑÐºÐµ
 WEBHOOK_URL = "https://ghostmindultimate.onrender.com/webhook"
 bot.remove_webhook()
