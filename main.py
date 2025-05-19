@@ -1,121 +1,103 @@
-import os
-from flask import Flask
-from threading import Thread
+from flask import Flask, request
 import telebot
-import requests
-from gtts import gTTS
-from io import BytesIO
-import speech_recognition as sr
-from pydub import AudioSegment
+import os
 from dotenv import load_dotenv
 from deep_translator import GoogleTranslator
+from gtts import gTTS
+from io import BytesIO
+import requests
 
 load_dotenv()
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-bot = telebot.TeleBot(TELEGRAM_TOKEN)
-
-app = Flask('')
-
-@app.route('/')
-def home():
-    return "GhostMind Ultimate is online!"
-
-def run():
-    app.run(host='0.0.0.0', port=8081)
-
-Thread(target=run).start()
+BOT_TOKEN = os.getenv("TELEGRAM_TOKEN")
+bot = telebot.TeleBot(BOT_TOKEN)
+app = Flask(__name__)
 
 memory = {}
 
-def get_gpt_response(prompt):
-    headers = {
-        'Authorization': f'Bearer {OPENAI_API_KEY}',
-        'Content-Type': 'application/json',
-    }
-    data = {
-        "model": "gpt-4",
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.7,
-    }
-    response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=data)
-    if response.status_code == 200:
-        return response.json()["choices"][0]["message"]["content"]
-    else:
-        return "Кечирасиз, жонам. OpenAI'dан хатолик: " + response.text
+def get_market_data():
+    try:
+        btc = requests.get("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd").json()
+        gold = requests.get("https://api.metals.live/v1/spot").json()
+        btc_price = btc["bitcoin"]["usd"]
+        gold_price = gold[0]["gold"]
+        return f"Bitcoin: ${btc_price:,}\nGold: ${gold_price:,}"
+    except Exception as e:
+        return f"Error getting market data: {str(e)}"
 
 def send_voice(chat_id, text):
     tts = gTTS(text=text, lang='ru', slow=False)
-    voice = BytesIO()
-    tts.write_to_fp(voice)
-    voice.seek(0)
-    bot.send_voice(chat_id, voice)
+    voice_fp = BytesIO()
+    tts.write_to_fp(voice_fp)
+    voice_fp.seek(0)
+    bot.send_voice(chat_id, voice_fp)
+
+@app.route('/', methods=['GET'])
+def index():
+    return "GhostMind Ultimate Webhook is running!"
+
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    if request.headers.get('content-type') == 'application/json':
+        json_string = request.get_data().decode('utf-8')
+        update = telebot.types.Update.de_json(json_string)
+        bot.process_new_updates([update])
+        return '', 200
+    else:
+        return 'Invalid content type', 403
 
 @bot.message_handler(commands=['start'])
 def start(message):
-    name = message.from_user.first_name or "жонам"
-    memory[message.chat.id] = {"name": name}
-    bot.send_message(message.chat.id, f"Салом, {name}! Мен сунъий интеллектман. Савол беринг!")
-    send_voice(message.chat.id, f"Салом, {name}! Мен тайёрман!")
-
-@bot.message_handler(content_types=['voice'])
-def voice_msg(message):
-    try:
-        file_info = bot.get_file(message.voice.file_id)
-        downloaded = bot.download_file(file_info.file_path)
-        ogg_path = "voice.ogg"
-        wav_path = "voice.wav"
-        with open(ogg_path, 'wb') as f:
-            f.write(downloaded)
-        sound = AudioSegment.from_ogg(ogg_path)
-        sound.export(wav_path, format="wav")
-
-        r = sr.Recognizer()
-        with sr.AudioFile(wav_path) as source:
-            audio = r.record(source)
-        text = r.recognize_google(audio, language="ru-RU")
-        bot.send_message(message.chat.id, f"Таниган овоз: {text}")
-        reply = get_gpt_response(text)
-        bot.send_message(message.chat.id, reply)
-        send_voice(message.chat.id, reply)
-    except Exception as e:
-        bot.send_message(message.chat.id, f"Овозни таниб бўлмади: {str(e)}")
-
-@bot.message_handler(func=lambda m: True)
-def handle_text(message):
-    text = message.text.lower().strip()
+    name = message.from_user.first_name
     chat_id = message.chat.id
+    memory[chat_id] = {"name": name}
+    greeting = f"Ð¡Ð°Ð»Ð¾Ð¼, {name}! Ð¯ GhostMind Ultimate. ÐÐ°Ð¿Ð¸ÑÐ¸ Â«ÑÐµÐ½Ð°Â» ÑÑÐ¾Ð±Ñ Ð¿Ð¾Ð»ÑÑÐ¸ÑÑ Ð°Ð½Ð°Ð»Ð¸Ð· BTC Ð¸ Ð·Ð¾Ð»Ð¾ÑÐ°."
+    bot.send_message(chat_id, greeting)
+    send_voice(chat_id, greeting)
 
-    if chat_id not in memory:
-        memory[chat_id] = {"name": message.from_user.first_name or "жонам"}
+@bot.message_handler(func=lambda msg: True)
+def handle_message(message):
+    chat_id = message.chat.id
+    text = message.text.lower().strip()
 
-    name = memory[chat_id]["name"]
+    memory[chat_id] = memory.get(chat_id, {})
+    memory[chat_id]["last"] = text
 
-    if text.startswith("переводи на"):
+    if text.startswith("Ð¿ÐµÑÐµÐ²Ð¾Ð´Ð¸ Ð½Ð°"):
         try:
             lang_map = {
-                "узбекский": "uz", "русский": "ru", "английский": "en",
-                "китайский": "zh-cn", "французский": "fr", "немецкий": "de",
-                "испанский": "es", "таджикский": "tg", "татарский": "tt",
-                "итальянский": "it", "киргизский": "ky"
+                "ÑÐ·Ð±ÐµÐºÑÐºÐ¸Ð¹": "uz",
+                "ÑÑÑÑÐºÐ¸Ð¹": "ru",
+                "Ð°Ð½Ð³Ð»Ð¸Ð¹ÑÐºÐ¸Ð¹": "en",
+                "ÐºÐ¸ÑÐ°Ð¹ÑÐºÐ¸Ð¹": "zh-cn",
+                "ÑÑÐ°Ð½ÑÑÐ·ÑÐºÐ¸Ð¹": "fr",
+                "Ð½ÐµÐ¼ÐµÑÐºÐ¸Ð¹": "de",
+                "Ð¸ÑÐ¿Ð°Ð½ÑÐºÐ¸Ð¹": "es",
+                "ÑÐ°Ð´Ð¶Ð¸ÐºÑÐºÐ¸Ð¹": "tg",
+                "Ð¸ÑÐ°Ð»ÑÑÐ½ÑÐºÐ¸Ð¹": "it",
+                "ÐºÐ¸ÑÐ³Ð¸Ð·ÑÐºÐ¸Ð¹": "ky",
+                "ÑÐ°ÑÐ°ÑÑÐºÐ¸Ð¹": "tt"
             }
-            lang = text.split("на", 1)[1].strip()
-            if lang not in lang_map:
-                bot.send_message(chat_id, "Язык не распознан.")
+            target_lang = text.split("Ð½Ð°", 1)[1].strip()
+            if target_lang not in lang_map:
+                bot.send_message(chat_id, "Ð¯Ð·ÑÐº Ð½Ðµ ÑÐ°ÑÐ¿Ð¾Ð·Ð½Ð°Ð½.")
                 return
             last_text = memory[chat_id].get("last", "")
-            translated = GoogleTranslator(source='auto', target=lang_map[lang]).translate(last_text)
-            bot.send_message(chat_id, f"Перевод на {lang}: {translated}")
+            translated = GoogleTranslator(source='auto', target=lang_map[target_lang]).translate(last_text)
+            bot.send_message(chat_id, f"ÐÐµÑÐµÐ²Ð¾Ð´ Ð½Ð° {target_lang}: {translated}")
             send_voice(chat_id, translated)
         except Exception as e:
-            bot.send_message(chat_id, f"Ошибка перевода: {str(e)}")
+            bot.send_message(chat_id, f"ÐÑÐ¸Ð±ÐºÐ° Ð¿ÐµÑÐµÐ²Ð¾Ð´Ð°: {str(e)}")
+    elif "ÑÐµÐ½Ð°" in text or "ÑÑÐ½Ð¾Ðº" in text:
+        market = get_market_data()
+        bot.send_message(chat_id, market)
+        send_voice(chat_id, market)
     else:
-        memory[chat_id]["last"] = text
-        bot.send_message(chat_id, "Думаю...")
-        reply = get_gpt_response(text)
+        reply = f"Ð¢Ñ Ð½Ð°Ð¿Ð¸ÑÐ°Ð»: {text}"
         bot.send_message(chat_id, reply)
         send_voice(chat_id, reply)
 
-print("GhostMind Ultimate запущен...")
-bot.infinity_polling()
+# Ð£ÑÑÐ°Ð½Ð¾Ð²ÐºÐ° Webhook Ð¿ÑÐ¸ Ð·Ð°Ð¿ÑÑÐºÐµ
+WEBHOOK_URL = "https://ghostmindultimate.onrender.com/webhook"
+bot.remove_webhook()
+bot.set_webhook(url=WEBHOOK_URL)
