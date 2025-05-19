@@ -106,8 +106,7 @@ def handle_text(message):
                 return
             last_text = memory[chat_id].get("last", "")
             translated = GoogleTranslator(source='auto', target=lang_map[lang]).translate(last_text)
-            bot.send_message(chat_id, f"Перевод на {lang}:
-{translated}")
+            bot.send_message(chat_id, f"Перевод на {lang}: {translated}")
             send_voice(chat_id, translated)
         except Exception as e:
             bot.send_message(chat_id, f"Ошибка перевода: {str(e)}")
