@@ -1,0 +1,10 @@
+flask
+requests
+gtts
+SpeechRecognition
+pydub
+telebot
+python-dotenv
+deep-translator
+openai
+pyTelegramBotAPI
