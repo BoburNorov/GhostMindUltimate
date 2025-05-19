@@ -8,4 +8,5 @@ python-dotenv
 deep-translator
 openai
 pyTelegramBotAPI
+pytesseract
 Pillow
