@@ -21,11 +21,10 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 if TELEGRAM_TOKEN is None:
     raise ValueError("TELEGRAM_TOKEN не найден в .env")
 
-# Запуск Telegram-бота
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 memory = {}
 
-# Flask-сервер
+# Flask сервер
 app = Flask(__name__)
 
 @app.route('/')
@@ -58,7 +57,7 @@ def handle_text(message):
         bot.send_message(chat_id, f"BTC: {price}")
         send_voice(chat_id, f"Цена биткоина: {price}")
 
-    elif "gold" in text or "xau" in text:
+    elif "gold" in text or "xau" in text or "золото" in text:
         price = get_price("gold")
         bot.send_message(chat_id, f"Gold: {price}")
         send_voice(chat_id, f"Цена золота: {price}")
@@ -91,8 +90,10 @@ def get_price(coin):
     except:
         return "ошибка получения цены"
 
-# Запускаем Flask сервер в отдельном потоке
+# Запускаем Flask-сервер и устанавливаем Webhook
 def run():
+    bot.remove_webhook()
+    bot.set_webhook(url=f"https://{os.getenv('REPL_SLUG')}.{os.getenv('REPL_OWNER')}.repl.co/{TELEGRAM_TOKEN}")
     app.run(host='0.0.0.0', port=8081)
 
 Thread(target=run).start()
