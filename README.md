@@ -1,2 +1,3 @@
 # GhostMindUltimate
-GPT-4 voice assistant bot with translations, trading, and alerts.
+
+Voice assistant bot using GPT with real-time market signals, translations, alerts, and more.
