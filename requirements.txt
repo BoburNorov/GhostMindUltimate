@@ -1,9 +1,7 @@
-flask
-requests
+telebot
 gtts
 SpeechRecognition
 pydub
-telebot
 python-dotenv
 deep-translator
-gunicorn
+requests
