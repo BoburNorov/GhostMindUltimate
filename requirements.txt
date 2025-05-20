@@ -1,12 +1,10 @@
 flask
 requests
-gtts
-SpeechRecognition
-pydub
-telebot
 python-dotenv
+telebot
+gtts
+speechrecognition
+pydub
 deep-translator
-openai
-pyTelegramBotAPI
-pytesseract
 Pillow
+pytesseract
