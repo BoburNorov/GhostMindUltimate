@@ -6,3 +6,4 @@ pydub
 telebot
 python-dotenv
 deep-translator
+gunicorn
