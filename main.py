@@ -30,11 +30,11 @@ app = Flask(__name__)
 def home():
     return "GhostMind Ultimate Pro is online!", 200
 
-@app.route(f'/{TELEGRAM_TOKEN}', methods=['POST'])
+@app.route('/webhook', methods=["POST"])
 def webhook():
     update = telebot.types.Update.de_json(request.stream.read().decode("utf-8"))
     bot.process_new_updates([update])
-    return '!', 200
+    return '', 200
 
 def send_voice(chat_id, text):
     tts = gTTS(text=text, lang='ru', slow=False)
