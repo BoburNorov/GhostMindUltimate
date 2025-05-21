@@ -4,6 +4,6 @@ gtts
 SpeechRecognition
 pydub
 telebot
-python-3.11.6
+python-dotenv
 deep-translator
 gunicorn
