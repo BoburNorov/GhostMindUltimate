@@ -1,7 +1,0 @@
-telebot
-gtts
-SpeechRecognition
-pydub
-python-dotenv
-deep-translator
-requests
