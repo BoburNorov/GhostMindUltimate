@@ -1,0 +1,4 @@
+telebot
+gtts
+deep-translator
+python-dotenv
