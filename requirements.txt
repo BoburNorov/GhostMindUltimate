@@ -1,4 +1,4 @@
 telebot
 gtts
 deep-translator
-python-dotenv
+python-3.11.6
