@@ -1,4 +1,9 @@
-telebot
+flask
+requests
 gtts
-deep-translator
+SpeechRecognition
+pydub
+telebot
 python-3.11.6
+deep-translator
+gunicorn
